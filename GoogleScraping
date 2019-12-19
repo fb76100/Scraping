@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 21 12:38:40 2019
+
+@author: faycalbegag
+"""
+
+#Author : Faycal BEGAG 
+#Last change 21/11/2019
+#Requirements : 
+#googlesearch (pip install google-search) https://github.com/anthonyhseb/googlesearch
+#pandas (use of DataFrames and writing to an Excel file)
+#random (to prevent Google from blocking the scraping)
+
+
+from googlesearch import search
+import pandas #dataframes
+import random #for random sleep to avoid DOS
+
+
+#USER AGENTS used to randomize searches in order to avoid error 503
+#Currently 23 different generic user agents
+USER_AGENTS = [
+   #Chrome
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 5.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.157 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+    #Firefox
+    'Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1)',
+    'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (Windows NT 6.2; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)',
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64; Trident/7.0; rv:11.0) like Gecko',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)',
+    'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)',
+    'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 2.0.50727; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)'
+]
+
+
+
+#DataFrame to store list of Melbourne Suburbs
+df1 = pandas.read_excel('YourFile.xlsx', sheet_name='Suburb')
+#Number of different locations to loop through
+total_rows1 = df1.shape[0]
+
+#DataFrame to store list of Keywords
+df2 = pandas.read_excel('YourFile.xlsx', sheet_name='Keyword')
+#Number of different locations to loop through
+total_rows2 = df2.shape[0]
+
+
+#DataFrame to store all search results
+df3 = pandas.DataFrame( columns=['keyword' ,'suburb','url', 'domain'])
+
+#Incrementer to count the number of scrape results
+k=0
+#loop1: through keywords stored in df2
+for j in range(0, total_rows2):
+    #Loop 2 : through through locations stored in df1
+    for i in range(0, total_rows1):
+        
+        print("*****************************")
+        print("Current suburb : "+ str(df1.iloc[i,0]))
+        print("Current keyword :"+str(df2.iloc[j,0]))
+        print("*****************************")
+        
+    	#incrementer to limit the number of URL we seek	
+        limitUrl = 0
+        
+    	#loop3: through url 
+        for url in search(df2.iloc[j,0]+" "+df1.iloc[i,0], stop=10, pause=random.randint(50,60), lang='en',user_agent=USER_AGENTS[random.randint(0,22)]): 
+            if limitUrl!=4 :
+                if df3[df3['name'].str.contains(url.split("//")[1].split("/")[1].split("/")[0], na=False)].empty == True:
+                    print(url)
+                    domain=url.split("//")[1].split("/")[1].split("/")[0]
+                    print(domain)
+                #storing the search result in df3
+                    df3.loc[k] = (df2.iloc[j,0],df1.iloc[i,0], url, domain)
+                    k+=1
+                    limitUrl+=1
+
+
+
+
+
+#Writing DataFrame data into an Excel spreadsheet
+#WARNING : this only happens when all searches have been made
+#At the moment, the script is run with Spyder which allows to export DataFrame after an error or an interruption
+with pandas.ExcelWriter('search_output.xlsx') as writer: 
+    df3.to_excel(writer, sheet_name='URLs', index=False)
+    
